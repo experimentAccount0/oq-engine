@@ -21,6 +21,7 @@ import os
 import sys
 import sqlite3
 from django.core.management import execute_from_command_line
+from openquake.engine import engine
 from openquake.server.settings import DATABASE
 from openquake.server import executor, dbserver
 from openquake.server.db import actions
@@ -41,7 +42,10 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    return getattr(actions, action)(db, *args)
+    if action == 'run':  # special action
+        return engine.run_calc(*args[:-1], **args[-1])
+    else:
+        return getattr(actions, action)(db, *args)
 
 
 # the code here is run in development mode; for instance

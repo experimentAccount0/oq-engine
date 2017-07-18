@@ -335,6 +335,7 @@ class EngineRunJobTestCase(unittest.TestCase):
     def test_ebr(self):
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
-        with Print.patch() as p:
+        with Print.patch() as p, mock.patch(
+                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
             run_job(job_ini, log_level='error')
         self.assertIn('id | name', str(p))

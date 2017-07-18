@@ -204,14 +204,17 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, calc._monitor.duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except:
+        except Exception as exc:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
                 logs.dbcmd('finish', job_id, 'failed')
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
-            raise
+            if conn is not None:
+                conn.send((exc, type(exc)))
+                conn.close()
+            return calc
         finally:
             # if there was an error in the calculation, this part may fail;
             # in such a situation, we simply log the cleanup error without
@@ -223,7 +226,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
-    if 'conn' is not None:
+    if conn is not None:
         conn.send((calc, None))
         conn.close()
     return calc

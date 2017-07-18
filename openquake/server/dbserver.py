@@ -73,9 +73,9 @@ class DbServer(object):
                     conn.close()
                     break
                 elif cmd == 'run':
-                    allargs = args[:-1] + (conn,)
                     Thread(target=engine.run_calc,
-                           args=allargs, kwargs=args[-1]).start()
+                           args=args[:-1] + (conn,),
+                           kwargs=args[-1]).start()
                     continue
                 func = getattr(actions, cmd)
                 fut = executor.submit(safely_call, func, (self.db,) + args)
