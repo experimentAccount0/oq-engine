@@ -170,7 +170,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
 
 
 def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None, **kw):
+             hazard_calculation_id=None, conn=None, **kw):
     """
     Run a calculation.
 
@@ -223,6 +223,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
+    if 'conn' is not None:
+        conn.send((calc, None))
+        conn.close()
     return calc
 
 

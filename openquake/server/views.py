@@ -412,7 +412,7 @@ def run_calc(request):
     try:
         job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
         # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: Starmap.restart())
+        fut.add_done_callback(lambda f: Starmap.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
