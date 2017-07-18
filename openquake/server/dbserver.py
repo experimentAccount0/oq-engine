@@ -23,7 +23,7 @@ import sqlite3
 import os.path
 import logging
 import subprocess
-from multiprocessing import Process
+from threading import Thread
 from multiprocessing.connection import Listener
 from concurrent.futures import ThreadPoolExecutor
 
@@ -74,8 +74,8 @@ class DbServer(object):
                     break
                 elif cmd == 'run':
                     allargs = args[:-1] + (conn,)
-                    Process(target=engine.run_calc,
-                            args=allargs, kwargs=args[-1]).start()
+                    Thread(target=engine.run_calc,
+                           args=allargs, kwargs=args[-1]).start()
                     continue
                 func = getattr(actions, cmd)
                 fut = executor.submit(safely_call, func, (self.db,) + args)
