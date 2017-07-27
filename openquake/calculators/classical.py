@@ -364,7 +364,8 @@ class PSHACalculator(base.HazardCalculator):
                             if sids is None:
                                 sf = src_filter
                             else:
-                                sites = site.FilteredSiteCollection(sids, tile)
+                                sites = site.FilteredSiteCollection(
+                                    sids, tile.complete)
                                 sf = SourceFilter(sites, oq.maximum_distance)
                             yield srcs, sf, sg.gsims, param, monitor
                             num_tasks += 1
