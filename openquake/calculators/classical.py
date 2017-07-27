@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -308,6 +308,7 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
+        disagg = oq.poes_disagg or oq.iml_disagg
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         if self.is_stochastic:  # disable tiling
             num_tiles = 1
@@ -336,7 +337,7 @@ class PSHACalculator(base.HazardCalculator):
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
                     maximum_distance=oq.maximum_distance,
-                    disagg=oq.poes_disagg or oq.iml_disagg,
+                    disagg=disagg,
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
@@ -344,14 +345,20 @@ class PSHACalculator(base.HazardCalculator):
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                    if oq.poes_disagg or oq.iml_disagg:  # only for disagg
+                    if disagg:  # only for disagg
                         param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, sg.gsims, param, monitor
                         num_tasks += 1
                         num_sources += len(sg)
-                    else:
+                    elif disagg:  # split the group, not the sources
+                        self.csm.add_infos(sg.sources)
+                        for block in block_splitter(sg.sources, maxweight):
+                            yield block, src_filter, sg.gsims, param, monitor
+                            num_tasks += 1
+                        num_sources += len(sg)
+                    else:  # split the group and the sources too
                         for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, sg.gsims, param, monitor

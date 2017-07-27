@@ -223,13 +223,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
                 src_filter = SourceFilter(sitecol, oq.maximum_distance)
-                split_sources = []
-                for src in src_group:
-                    for split, _sites in src_filter(
-                            sourceconverter.split_source(src), sitecol):
-                        split_sources.append(split)
                 mon = self.monitor('disaggregation')
-                for srcs in split_in_blocks(split_sources, nblocks):
+                for srcs in split_in_blocks(src_group, nblocks):
                     all_args.append(
                         (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, mon))
