@@ -33,6 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib import site
 from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
@@ -351,12 +352,23 @@ class PSHACalculator(base.HazardCalculator):
                         yield sg, src_filter, sg.gsims, param, monitor
                         num_tasks += 1
                         num_sources += len(sg)
-                    else:
+                    elif oq.split_sources:
                         for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, sg.gsims, param, monitor
                             num_tasks += 1
                             num_sources += len(block)
+                    else:  # split sites
+                        for srcs, sids in self.csm.split_sites(
+                                sg.sources, src_filter, maxweight):
+                            if sids is None:
+                                sf = src_filter
+                            else:
+                                sites = site.FilteredSiteCollection(sids, tile)
+                                sf = SourceFilter(sites, oq.maximum_distance)
+                            yield srcs, sf, sg.gsims, param, monitor
+                            num_tasks += 1
+                        num_sources += len(sg)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 

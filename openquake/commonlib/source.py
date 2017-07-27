@@ -677,6 +677,19 @@ class CompositeSourceModel(collections.Sequence):
                     srcs, maxweight, weight=operator.attrgetter('weight')):
                 yield block
 
+    def split_sites(self, sources, src_filter, maxweight=MAXWEIGHT):
+        light = [src for src in sources if src.weight <= maxweight]
+        self.add_infos(light)
+        for block in block_splitter(
+                light, maxweight, weight=operator.attrgetter('weight')):
+            yield block, None
+        heavy = [src for src in sources if src.weight > maxweight]
+        self.add_infos(heavy)
+        for src, sites in src_filter(heavy):
+            size = math.ceil(maxweight / src.weight * len(sites.indices))
+            for indices in block_splitter(sites.indices, size):
+                yield [src], numpy.array(indices, U32)
+
     def __repr__(self):
         """
         Return a string representation of the composite model
