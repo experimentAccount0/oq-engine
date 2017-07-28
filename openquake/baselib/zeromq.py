@@ -15,6 +15,8 @@ SUB = zmq.SUB
 POLLIN = zmq.POLLIN
 POLLOUT = zmq.POLLOUT
 
+cpu_count = multiprocessing.cpu_count()
+
 
 class Context(zmq.Context):
     """
@@ -115,6 +117,15 @@ def worker(context, backend_url, func=None):
             break
         res = safely_call(cmd, args)
         socket.send_multipart([ident, pickle.dumps(res)])
+
+
+def server(context, func, frontend_url, backend_url='inproc://server',
+           cls=Thread, nworkers=cpu_count):
+    for _ in range(nworkers):
+        cls(worker, backend_url, func).start()
+    with cls(proxy, frontend_url, backend_url):
+        if nworkers == 0:  # run the worker in process
+            worker(context, backend_url, func)
 
 
 def starmap(context, frontend_url, func, allargs):

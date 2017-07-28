@@ -18,13 +18,14 @@
 
 import os
 import re
+import sys
 import getpass
 import collections
 import numpy
 import h5py
 
 from openquake.baselib.python3compat import pickle
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, zeromq as z
 from openquake.commonlib import config
 from openquake.commonlib.writers import write_csv
 
@@ -522,3 +523,35 @@ def persistent_attribute(key):
         setattr(self.datastore, privatekey, value)
 
     return property(getter, setter)
+
+
+def read_data(calc_id, path):
+    """
+    Read data from the datastore associated to the given calculation ID
+    """
+    from openquake.commonlib.datastore import read
+    with read(calc_id) as ds:
+        try:
+            obj = ds[path]
+        except KeyError:
+            dic = {}
+        else:
+            dic = dict(getattr(obj, 'attrs', {}))
+            if hasattr(obj, 'value'):  # array dataset
+                dic['_array_'] = obj.value
+            else:  # group dataset
+                dic['_dsets_'] = list(obj)
+    return dic
+
+
+if __name__ == '__main__':
+    frontend = sys.argv[1]  # ex: python hdf5.py tcp://127.0.0.1:9000
+    with z.Context.instance() as context:
+        z.server(context, read_data, frontend)
+
+    # here is an example of client:
+    # with z.Context() as c, c.connect(
+    #         'tcp://127.0.0.1:9000', z.DEALER) as socket:
+    #     socket.send_pyobj((1, 'hcurves/rlz-000'))
+    #     res, exc, mon = socket.recv_pyobj()
+    #    print(res)
